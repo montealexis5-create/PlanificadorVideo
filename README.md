@@ -103,9 +103,36 @@ Los dos son gratuitos:
 - **Encabezados de seguridad:** Content-Security-Policy (solo scripts propios y el cliente de SignalR), `X-Frame-Options`, `nosniff` y `Permissions-Policy`.
 - **Errores:** un manejador centralizado devuelve 400 con un mensaje claro para los errores de validación y 500 sin detalles internos para el resto.
 
-**Limitación del prototipo:** ver el panel y las capturas no pide clave. Por eso la API escucha solo en la red local. Antes de publicarla en internet habría que agregar un inicio de sesión.
+**Limitación del prototipo:** ver el panel y las capturas no pide clave. Por eso la API escucha solo en la red local. Antes de publicarla en internet hay que completar los pasos de [Próximos pasos para producción](#próximos-pasos-para-producción).
 
 Las claves que vienen en `appsettings.json` son **solo para desarrollo**. En producción se reemplazan con variables de entorno, por ejemplo `Seguridad__ApiKey` y `Seguridad__ClaveAdministrador`.
+
+## Próximos pasos para producción
+
+Este proyecto es un **prototipo**. Para publicarlo en internet faltan estos pasos, ordenados por prioridad:
+
+### Seguridad
+1. **Inicio de sesión:** usuarios con contraseña (hash con BCrypt) y tokens JWT. El panel, las capturas y la configuración tienen que pedir sesión, y la clave de administrador fija tiene que desaparecer.
+2. **Secretos fuera del código:** las claves de `appsettings.json` pasan a variables de entorno o a un gestor de secretos, por ejemplo *user-secrets* en desarrollo y Azure Key Vault en la nube.
+3. **Una clave por cámara:** cada celular o webcam registrado tiene su propia API key, que se puede revocar si se pierde. El QR se arma con la clave de esa cámara y no con una compartida.
+4. **Cifrar los datos sensibles:** la API key de WhatsApp tiene que guardarse cifrada, con ASP.NET Data Protection.
+5. **HTTPS real:** reemplazar el certificado de desarrollo por uno válido (por ejemplo de Let's Encrypt) y forzar HTTPS con HSTS.
+6. **Servir el cliente de SignalR desde la API**, sin depender de un CDN externo.
+
+### Datos
+7. **Migraciones de EF Core** en lugar de `EnsureCreated`, para cambiar el esquema sin perder datos.
+8. **Retención de imágenes:** borrar automáticamente las capturas viejas (por ejemplo, las de más de 30 días), con un `BackgroundService`.
+9. **Guardar las imágenes en un almacenamiento de objetos** (S3, Azure Blob o similar) en lugar del disco del servidor.
+
+### Confiabilidad y escalado
+10. **Cola de avisos persistente** (en la base o en un servicio de colas) para no perder avisos si la API se reinicia, y control del tiempo entre avisos compartido entre varias instancias.
+11. **MailKit** en lugar de `SmtpClient` para el envío de emails, como recomienda Microsoft.
+12. **Health checks** (`/health`) y logs estructurados para monitorear la API.
+
+### Calidad
+13. **Tests de integración** de los endpoints con `WebApplicationFactory` y una base de prueba.
+14. **Integración continua:** un workflow de GitHub Actions que compile y corra los tests en cada push.
+15. **Contenedor de la API** (`Dockerfile`) para desplegarla junto con la base con `docker compose`.
 
 ## Estructura
 
