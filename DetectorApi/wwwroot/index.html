@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Panel de detección de personas: filtro de movimiento local y confirmación con IA">
+    <title>Monitor de presencia</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+    <header class="encabezado">
+        <div class="contenedor encabezado-contenido">
+            <div class="marca">
+                <svg class="marca-icono" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+                </svg>
+                <div>
+                    <h1>Monitor de presencia</h1>
+                    <p>Filtro de movimiento local + confirmación con IA</p>
+                </div>
+            </div>
+            <div class="acciones">
+                <span id="estadoConexion" class="estado" role="status">
+                    <span class="estado-punto"></span><span class="estado-texto">Conectando...</span>
+                </span>
+                <button id="botonCamara" class="boton boton-secundario" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+                    Conectar cámara
+                </button>
+                <button id="botonAvisos" class="boton boton-secundario" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                    Avisos
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="contenedor">
+        <!-- Recorrido de una imagen: cámara -> filtro local -> IA en la nube -->
+        <section class="embudo" aria-label="Recorrido de las imágenes">
+            <article class="etapa">
+                <span class="etapa-numero">1</span>
+                <h2>Cámara</h2>
+                <p class="etapa-valor" id="statFrames">0</p>
+                <p class="etapa-detalle">frames analizados por el planificador</p>
+            </article>
+            <article class="etapa">
+                <span class="etapa-numero">2</span>
+                <h2>Filtro local</h2>
+                <p class="etapa-valor" id="statRecibidas">0</p>
+                <p class="etapa-detalle">enviadas a la nube</p>
+                <div class="barra" aria-hidden="true"><div class="barra-relleno exito" id="barraFiltrado"></div></div>
+                <p class="etapa-detalle"><strong id="statFiltrado" class="exito">0%</strong> descartado sin usar la red</p>
+            </article>
+            <article class="etapa etapa-ia">
+                <span class="etapa-numero">3</span>
+                <h2>IA en la nube</h2>
+                <p class="etapa-valor peligro" id="statPersonas">0</p>
+                <p class="etapa-detalle">personas confirmadas · <span id="statInferencia">0 ms</span> por imagen</p>
+                <div class="barra" aria-hidden="true"><div class="barra-relleno aviso" id="barraIa"></div></div>
+                <p class="etapa-detalle"><strong id="statDescartadoIa" class="aviso">0%</strong> eran falsas alarmas</p>
+            </article>
+        </section>
+
+        <section aria-labelledby="tituloCapturas">
+            <div class="barra-herramientas">
+                <h2 id="tituloCapturas" class="titulo-seccion">Capturas recientes</h2>
+                <div class="filtros" role="radiogroup" aria-label="Filtrar capturas">
+                    <label><input type="radio" name="filtro" value="" checked><span>Todas</span></label>
+                    <label><input type="radio" name="filtro" value="true"><span>Personas</span></label>
+                    <label><input type="radio" name="filtro" value="false"><span>Falsas alarmas</span></label>
+                </div>
+            </div>
+
+            <p id="mensaje" class="mensaje" hidden></p>
+            <div id="listaCapturas" class="grilla"></div>
+        </section>
+    </main>
+
+    <!-- Imagen ampliada: <dialog> nativo, se cierra con Esc o con un clic afuera -->
+    <dialog id="dialogo" class="dialogo">
+        <div id="contenidoDialogo"></div>
+        <p id="detalleDialogo" class="dialogo-detalle"></p>
+    </dialog>
+
+    <!-- Configuración de los avisos al dueño -->
+    <dialog id="dialogoAvisos" class="dialogo dialogo-formulario">
+        <form id="formularioAvisos" method="dialog" novalidate>
+            <header class="formulario-encabezado">
+                <h2>Avisos al dueño</h2>
+                <p>Cuando la IA confirma una persona, te avisamos por email y/o WhatsApp.</p>
+            </header>
+
+            <label class="campo">
+                <span>Clave de administrador</span>
+                <input id="claveAdmin" type="password" autocomplete="current-password" required>
+            </label>
+            <button id="botonCargarAvisos" class="boton boton-secundario" type="button">Desbloquear</button>
+
+            <fieldset id="camposAvisos" disabled>
+                <label class="interruptor">
+                    <input id="avisosActivos" type="checkbox">
+                    <span>Avisos activados</span>
+                </label>
+                <label class="campo">
+                    <span>Email</span>
+                    <input id="avisoEmail" type="email" placeholder="dueno@ejemplo.com" autocomplete="email">
+                </label>
+                <label class="campo">
+                    <span>WhatsApp (con código de país)</span>
+                    <input id="avisoTelefono" type="tel" placeholder="+5491112345678" autocomplete="tel">
+                </label>
+                <label class="campo">
+                    <span>API key de CallMeBot <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener">¿cómo la consigo?</a></span>
+                    <input id="avisoApiKey" type="password" autocomplete="off">
+                </label>
+                <label class="campo">
+                    <span>Minutos mínimos entre avisos</span>
+                    <input id="avisoMinutos" type="number" min="0" max="1440" value="1">
+                </label>
+            </fieldset>
+
+            <p id="resultadoAvisos" class="resultado" role="status"></p>
+
+            <footer class="formulario-pie">
+                <button class="boton boton-secundario" type="submit" value="cancelar">Cerrar</button>
+                <button id="botonProbarAvisos" class="boton boton-secundario" type="button" disabled>Enviar prueba</button>
+                <button id="botonGuardarAvisos" class="boton" type="button" disabled>Guardar</button>
+            </footer>
+        </form>
+    </dialog>
+
+    <!-- Conectar un celular como cámara escaneando un QR -->
+    <dialog id="dialogoCamara" class="dialogo dialogo-formulario">
+        <form method="dialog" novalidate>
+            <header class="formulario-encabezado">
+                <h2>Conectar una cámara</h2>
+                <p>Escaneá el QR con el celular y usalo como cámara. Tiene que estar en la misma red WiFi que esta compu.</p>
+            </header>
+            <label class="campo">
+                <span>Clave de administrador</span>
+                <input id="claveCamara" type="password" autocomplete="current-password">
+            </label>
+            <button id="botonGenerarQr" class="boton" type="button">Generar QR</button>
+            <div id="qr" class="qr" hidden>
+                <img id="imagenQr" alt="Código QR para conectar la cámara">
+                <code id="urlQr"></code>
+                <ol class="pasos">
+                    <li>Escaneá el QR con la cámara del celular.</li>
+                    <li>Si aparece una advertencia de seguridad, elegí "Avanzado" y continuá (es el certificado de desarrollo).</li>
+                    <li>Tocá "Iniciar cámara" y permití el acceso.</li>
+                </ol>
+            </div>
+            <p id="resultadoCamara" class="resultado error" role="status"></p>
+            <footer class="formulario-pie">
+                <button class="boton boton-secundario" type="submit">Cerrar</button>
+            </footer>
+        </form>
+    </dialog>
+
+    <!-- Aviso cuando la IA confirma una persona -->
+    <div id="aviso" class="aviso-flotante" role="alert" hidden></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

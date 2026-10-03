@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="Usar este dispositivo como cámara del monitor de presencia">
+    <title>Cámara · Monitor de presencia</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body class="pagina-camara">
+    <main class="camara">
+        <video id="video" class="camara-video" autoplay playsinline muted></video>
+
+        <header class="camara-barra">
+            <span id="estadoCamara" class="estado"><span class="estado-punto"></span><span class="estado-texto">Cámara apagada</span></span>
+            <span id="contador" class="camara-contador">0 frames · 0 enviadas</span>
+        </header>
+
+        <section id="inicio" class="camara-inicio">
+            <svg class="marca-icono" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+            </svg>
+            <h1>Usar este celular como cámara</h1>
+            <p>El celular filtra el movimiento y solo manda a la IA las imágenes en las que pasa algo.</p>
+            <button id="botonIniciar" class="boton" type="button">Iniciar cámara</button>
+            <p id="errorCamara" class="resultado error" role="alert"></p>
+        </section>
+
+        <p id="ultimoResultado" class="camara-resultado" role="status" hidden></p>
+    </main>
+
+    <script src="camara.js"></script>
+</body>
+</html>

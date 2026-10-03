@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    container_name: detector-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: detector
+      POSTGRES_USER: detector
+      POSTGRES_PASSWORD: detector_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - detector-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U detector -d detector"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  detector-data:

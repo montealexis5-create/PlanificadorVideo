@@ -2,3 +2,6 @@ bin/
 obj/
 *.dll
 *.exe
+.vs/
+capturas/
+DetectorApi/imagenes/
